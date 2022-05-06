@@ -1,6 +1,7 @@
 package util
 
 import (
+	"github.com/shopspring/decimal"
 	"math/rand"
 	"strconv"
 	"strings"
@@ -38,7 +39,8 @@ func RandomOwner() string {
 
 // RandomBalance generates a random balance
 func RandomBalance() string {
-	return strconv.Itoa(RandomInt(100, 10000000)) + ".0000"
+	d, _ := decimal.NewFromString(strconv.Itoa(RandomInt(100, 200)))
+	return d.StringFixed(4)
 }
 
 // RandomCurrency generates a random currency code
