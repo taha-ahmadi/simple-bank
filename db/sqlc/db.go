@@ -24,6 +24,9 @@ func New(db DBTX) *Queries {
 func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	q := Queries{db: db}
 	var err error
+	if q.addAccountBalanceStmt, err = db.PrepareContext(ctx, addAccountBalance); err != nil {
+		return nil, fmt.Errorf("error preparing query AddAccountBalance: %w", err)
+	}
 	if q.createAccountStmt, err = db.PrepareContext(ctx, createAccount); err != nil {
 		return nil, fmt.Errorf("error preparing query CreateAccount: %w", err)
 	}
@@ -38,6 +41,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	}
 	if q.getAccountByIdStmt, err = db.PrepareContext(ctx, getAccountById); err != nil {
 		return nil, fmt.Errorf("error preparing query GetAccountById: %w", err)
+	}
+	if q.getAccountByIdForUpdateStmt, err = db.PrepareContext(ctx, getAccountByIdForUpdate); err != nil {
+		return nil, fmt.Errorf("error preparing query GetAccountByIdForUpdate: %w", err)
 	}
 	if q.getTransactionByIdStmt, err = db.PrepareContext(ctx, getTransactionById); err != nil {
 		return nil, fmt.Errorf("error preparing query GetTransactionById: %w", err)
@@ -65,6 +71,11 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 
 func (q *Queries) Close() error {
 	var err error
+	if q.addAccountBalanceStmt != nil {
+		if cerr := q.addAccountBalanceStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing addAccountBalanceStmt: %w", cerr)
+		}
+	}
 	if q.createAccountStmt != nil {
 		if cerr := q.createAccountStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing createAccountStmt: %w", cerr)
@@ -88,6 +99,11 @@ func (q *Queries) Close() error {
 	if q.getAccountByIdStmt != nil {
 		if cerr := q.getAccountByIdStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getAccountByIdStmt: %w", cerr)
+		}
+	}
+	if q.getAccountByIdForUpdateStmt != nil {
+		if cerr := q.getAccountByIdForUpdateStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getAccountByIdForUpdateStmt: %w", cerr)
 		}
 	}
 	if q.getTransactionByIdStmt != nil {
@@ -164,11 +180,13 @@ func (q *Queries) queryRow(ctx context.Context, stmt *sql.Stmt, query string, ar
 type Queries struct {
 	db                          DBTX
 	tx                          *sql.Tx
+	addAccountBalanceStmt       *sql.Stmt
 	createAccountStmt           *sql.Stmt
 	createTransactionStmt       *sql.Stmt
 	createTransferStmt          *sql.Stmt
 	deleteAccountStmt           *sql.Stmt
 	getAccountByIdStmt          *sql.Stmt
+	getAccountByIdForUpdateStmt *sql.Stmt
 	getTransactionByIdStmt      *sql.Stmt
 	getTransferByIdStmt         *sql.Stmt
 	listAccountTransactionsStmt *sql.Stmt
@@ -182,11 +200,13 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 	return &Queries{
 		db:                          tx,
 		tx:                          tx,
+		addAccountBalanceStmt:       q.addAccountBalanceStmt,
 		createAccountStmt:           q.createAccountStmt,
 		createTransactionStmt:       q.createTransactionStmt,
 		createTransferStmt:          q.createTransferStmt,
 		deleteAccountStmt:           q.deleteAccountStmt,
 		getAccountByIdStmt:          q.getAccountByIdStmt,
+		getAccountByIdForUpdateStmt: q.getAccountByIdForUpdateStmt,
 		getTransactionByIdStmt:      q.getTransactionByIdStmt,
 		getTransferByIdStmt:         q.getTransferByIdStmt,
 		listAccountTransactionsStmt: q.listAccountTransactionsStmt,
